@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Porsche – 360° Model Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700;900&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --gold: #D4AF37;
+            --bg: #090909;
+            --text: #f0f0f0;
+            --subtle: #666;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* ── NAV ─────────────────────────────────────── */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.1rem 5%;
+            background: rgba(9, 9, 9, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .nav-logo {
+            font-size: 1.2rem;
+            font-weight: 700;
+            letter-spacing: 5px;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .nav-back {
+            font-size: 0.75rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--subtle);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-back:hover {
+            color: #fff;
+        }
+
+        /* ── STUDIO BACKGROUND ───────────────────────── */
+        #studio-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            /* Studio gradient — dark top, subtle floor reflection */
+            background:
+                radial-gradient(ellipse 120% 60% at 50% 100%, rgba(30, 25, 15, 0.6), transparent),
+                radial-gradient(ellipse 80% 80% at 50% 50%, rgba(20, 18, 10, 0.4), transparent),
+                linear-gradient(to bottom, #050505 0%, #0f0e0a 60%, #161410 100%);
+        }
+
+        /* Studio floor line */
+        #studio-bg::after {
+            content: '';
+            position: absolute;
+            bottom: 28%;
+            left: 10%;
+            right: 10%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.15), transparent);
+        }
+
+        /* Ambient rim light */
+        .rim-light {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            filter: blur(100px);
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.08;
+        }
+
+        .rim-left {
+            background: #D4AF37;
+            top: 20%;
+            left: -100px;
+        }
+
+        .rim-right {
+            background: #3060ff;
+            top: 20%;
+            right: -100px;
+            opacity: 0.05;
+        }
+
+        /* ── VIEWER STAGE ────────────────────────────── */
+        #viewer-stage {
+            position: fixed;
+            inset: 0;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+        }
+
+        #viewer-stage.dragging {
+            cursor: grabbing;
+        }
+
+        /* Canvas / image container with 3D depth */
+        #model-container {
+            position: relative;
+            width: min(900px, 90vw);
+            height: min(540px, 55vh);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #model-img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: block;
+            pointer-events: none;
+            /* Initial drop shadow to simulate studio lighting */
+            filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.8)) drop-shadow(0 5px 15px rgba(212, 175, 55, 0.08));
+            transition: filter 0.3s;
+        }
+
+        /* Ground reflection */
+        #model-reflection {
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 75%;
+            pointer-events: none;
+            opacity: 0.18;
+            filter: blur(4px);
+            transform-origin: top center;
+            scale: 1 -0.3;
+            transform: translateX(-50%) scaleY(-0.3);
+            mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent 80%);
+            -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent 80%);
+        }
+
+        /* Ground shadow ellipse */
+        #ground-shadow {
+            position: absolute;
+            bottom: -70px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 30px;
+            background: radial-gradient(ellipse, rgba(0, 0, 0, 0.7), transparent 70%);
+            filter: blur(8px);
+        }
+
+        /* ── LOADING SCREEN ──────────────────────────── */
+        #loading {
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            transition: opacity 0.8s ease;
+        }
+
+        #loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .ld-logo {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 6px;
+            color: #fff;
+        }
+
+        .ld-bar-track {
+            width: 200px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.07);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .ld-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--gold), #f5e27a);
+            transition: width 0.08s linear;
+        }
+
+        .ld-text {
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--subtle);
+        }
+
+        /* ── HUD / UI OVERLAY ────────────────────────── */
+
+        /* Model name plate */
+        #name-plate {
+            position: fixed;
+            bottom: 130px;
+            left: 5%;
+            z-index: 20;
+        }
+
+        #name-plate .np-eyebrow {
+            font-size: 0.6rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 0.3rem;
+        }
+
+        #name-plate .np-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: -2px;
+            line-height: 1;
+        }
+
+        #name-plate .np-sub {
+            font-size: 0.8rem;
+            color: var(--subtle);
+            margin-top: 0.3rem;
+        }
+
+        /* Rotation angle indicator */
+        #angle-hud {
+            position: fixed;
+            bottom: 130px;
+            right: 5%;
+            z-index: 20;
+            text-align: right;
+        }
+
+        .hud-label {
+            font-size: 0.6rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--subtle);
+            margin-bottom: 0.2rem;
+        }
+
+        .hud-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--gold);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* View mode badge */
+        #view-badge {
+            position: fixed;
+            top: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .vb-dot-wrap {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .vb-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            transition: all 0.3s;
+        }
+
+        .vb-dot.on {
+            background: var(--gold);
+            box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+        }
+
+        .vb-label {
+            font-size: 0.65rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--subtle);
+            min-width: 80px;
+            text-align: center;
+            transition: color 0.3s;
+        }
+
+        .vb-label.active {
+            color: var(--gold);
+        }
+
+        /* ── BOTTOM CONTROLS ─────────────────────────── */
+        #controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 1.2rem 5%;
+            background: linear-gradient(to top, rgba(9, 9, 9, 0.95), transparent);
+        }
+
+        .ctrl-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--subtle);
+            padding: 0.6rem 1.2rem;
+            border-radius: 50px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.72rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ctrl-btn:hover {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: rgba(212, 175, 55, 0.3);
+            color: var(--gold);
+        }
+
+        .ctrl-btn.active,
+        .ctrl-btn.auto-on {
+            background: rgba(212, 175, 55, 0.15);
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        .ctrl-sep {
+            width: 1px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        /* Drag hint */
+        #drag-hint {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+
+        #drag-hint.hidden {
+            opacity: 0;
+        }
+
+        .drag-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse-ring 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-ring {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.8;
+            }
+
+            50% {
+                transform: scale(1.12);
+                opacity: 1;
+            }
+        }
+
+        .drag-circle svg {
+            color: var(--gold);
+        }
+
+        .drag-label {
+            font-size: 0.65rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold);
+        }
+
+        /* Rotation orbit ring */
+        #orbit-ring {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            width: 120px;
+            height: 24px;
+        }
+
+        .orbit-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .orbit-ellipse {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.08);
+            stroke-width: 1;
+        }
+
+        .orbit-indicator {
+            fill: var(--gold);
+            transition: cx 0.05s linear;
+        }
+
+        /* ── SPEC STRIP ──────────────────────────────── */
+        #spec-strip {
+            position: fixed;
+            top: 50%;
+            right: 5%;
+            transform: translateY(-50%);
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            gap: 1.8rem;
+        }
+
+        .spec-item {
+            text-align: right;
+            opacity: 0;
+            transform: translateX(15px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .spec-item.in {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .spec-lbl {
+            font-size: 0.6rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--subtle);
+            margin-bottom: 0.15rem;
+        }
+
+        .spec-val {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- STUDIO BACKGROUND -->
+    <div id="studio-bg">
+        <div class="rim-light rim-left"></div>
+        <div class="rim-light rim-right"></div>
+    </div>
+
+    <!-- LOADING -->
+    <div id="loading">
+        <div class="ld-logo">PORSCHE</div>
+        <div class="ld-bar-track">
+            <div class="ld-bar-fill" id="ld-bar"></div>
+        </div>
+        <div class="ld-text" id="ld-text">Initialising model viewer — 0%</div>
+    </div>
+
+    <!-- NAV -->
+    <nav>
+        <a href="index.html" class="nav-logo">PORSCHE</a>
+        <div class="nav-right">
+            <a href="index.html#models" class="nav-back">← Models</a>
+        </div>
+    </nav>
+
+    <!-- VIEW MODE BADGE -->
+    <div id="view-badge">
+        <span class="vb-label active" id="vb-top">Top</span>
+        <div class="vb-dot-wrap">
+            <div class="vb-dot"></div>
+            <div class="vb-dot on" id="vb-center-dot"></div>
+            <div class="vb-dot"></div>
+        </div>
+        <span class="vb-label active" id="vb-bottom">Side · Bottom</span>
+    </div>
+
+    <!-- DRAG HINT -->
+    <div id="drag-hint">
+        <div class="drag-circle">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M8 3l-5 5 5 5" />
+                <path d="M3 8h13" />
+                <path d="M16 21l5-5-5-5" />
+                <path d="M21 16H8" />
+            </svg>
+        </div>
+        <span class="drag-label">Drag to rotate</span>
+    </div>
+
+    <!-- NAME PLATE -->
+    <div id="name-plate">
+        <div class="np-eyebrow">Porsche 911 Carrera</div>
+        <div class="np-title">360°</div>
+        <div class="np-sub" id="view-mode-label">Side View · Drag to rotate</div>
+    </div>
+
+    <!-- ANGLE HUD -->
+    <div id="angle-hud">
+        <div class="hud-label">Rotation</div>
+        <div class="hud-value" id="angle-val">0°</div>
+    </div>
+
+    <!-- SPEC STRIP -->
+    <div id="spec-strip">
+        <div class="spec-item" id="s1">
+            <div class="spec-lbl">Engine</div>
+            <div class="spec-val">3.0L Flat-6</div>
+        </div>
+        <div class="spec-item" id="s2">
+            <div class="spec-lbl">Power</div>
+            <div class="spec-val">379 hp</div>
+        </div>
+        <div class="spec-item" id="s3">
+            <div class="spec-lbl">0–60 mph</div>
+            <div class="spec-val">4.0 s</div>
+        </div>
+        <div class="spec-item" id="s4">
+            <div class="spec-lbl">Top Speed</div>
+            <div class="spec-val">182 mph</div>
+        </div>
+    </div>
+
+    <!-- VIEWER STAGE -->
+    <div id="viewer-stage">
+        <div id="model-container">
+            <img id="model-img" src="" alt="Porsche 360° View" draggable="false">
+            <img id="model-reflection" src="" alt="" draggable="false" aria-hidden="true">
+            <div id="ground-shadow"></div>
+        </div>
+    </div>
+
+    <!-- ORBIT RING -->
+    <div id="orbit-ring">
+        <svg class="orbit-svg" viewBox="0 0 120 24">
+            <ellipse class="orbit-ellipse" cx="60" cy="12" rx="55" ry="10" />
+            <circle class="orbit-indicator" id="orbit-dot" cx="60" cy="2" r="4" />
+        </svg>
+    </div>
+
+    <!-- CONTROLS -->
+    <div id="controls">
+        <button class="ctrl-btn auto-on" id="btn-auto" onclick="toggleAutoRotate()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+            </svg>
+            Auto Rotate
+        </button>
+
+        <div class="ctrl-sep"></div>
+
+        <button class="ctrl-btn" id="btn-top" onclick="setView('top')">Top View</button>
+        <button class="ctrl-btn" id="btn-side" onclick="setView('side')">Side View</button>
+        <button class="ctrl-btn" id="btn-bottom" onclick="setView('bottom')">Under Body</button>
+
+        <div class="ctrl-sep"></div>
+
+        <button class="ctrl-btn" onclick="resetView()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+            </svg>
+            Reset
+        </button>
+    </div>
+
+    <script>
+        // ================================================================
+        //  FRAME DATA
+        // ================================================================
+        const VIEWS = {
+            side: { dir: 'assets/images/side_view/', count: 40, label: 'Side View' },
+            top: { dir: 'assets/images/top_view/', count: 40, label: 'Top View' },
+            bottom: { dir: 'assets/images/bottom_view/', count: 64, label: 'Under Body' },
+        };
+
+        const frames = { side: [], top: [], bottom: [] };
+
+        // Current state
+        let currentView = 'side';
+        let currentFrame = 0;
+        let autoRotate = true;
+        let autoRotateRAF = null;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragStartFrame = 0;
+        let hintShown = false;
+        let totalLoaded = 0;
+        const totalFrames = 40 + 40 + 64;
+
+        // ================================================================
+        //  PRELOAD ALL FRAMES
+        // ================================================================
+        const ldBar = document.getElementById('ld-bar');
+        const ldText = document.getElementById('ld-text');
+        const loading = document.getElementById('loading');
+
+        Object.entries(VIEWS).forEach(([key, v]) => {
+            for (let i = 1; i <= v.count; i++) {
+                const img = new Image();
+                img.src = `${v.dir}ezgif-frame-${String(i).padStart(3, '0')}.jpg`;
+                img.onload = img.onerror = () => {
+                    totalLoaded++;
+                    const pct = Math.round((totalLoaded / totalFrames) * 100);
+                    ldBar.style.width = pct + '%';
+                    ldText.textContent = `Initialising model viewer — ${pct}%`;
+                    if (totalLoaded >= totalFrames) onReady();
+                };
+                frames[key].push(img);
+            }
+        });
+
+        // ================================================================
+        //  ON READY
+        // ================================================================
+        const modelImg = document.getElementById('model-img');
+        const reflImg = document.getElementById('model-reflection');
+        const angleVal = document.getElementById('angle-val');
+        const viewModeLabel = document.getElementById('view-mode-label');
+        const vbTop = document.getElementById('vb-top');
+        const vbBottom = document.getElementById('vb-bottom');
+        const dragHint = document.getElementById('drag-hint');
+        const orbitDot = document.getElementById('orbit-dot');
+        const specItems = document.querySelectorAll('.spec-item');
+
+        function onReady() {
+            setTimeout(() => {
+                loading.classList.add('hidden');
+                setTimeout(() => loading.style.display = 'none', 900);
+
+                // Reveal specs with stagger
+                specItems.forEach((el, i) => {
+                    setTimeout(() => el.classList.add('in'), 300 + i * 150);
+                });
+            }, 300);
+
+            renderFrame();
+            startAutoRotate();
+        }
+
+        // ================================================================
+        //  RENDER
+        // ================================================================
+        function renderFrame() {
+            const fr = frames[currentView][currentFrame];
+            if (!fr) return;
+
+            modelImg.src = fr.src;
+            reflImg.src = fr.src;
+
+            // Rotate angle — side view = full 360
+            let angleDeg = 0;
+            if (currentView === 'side') {
+                angleDeg = Math.round((currentFrame / VIEWS.side.count) * 360);
+            }
+            angleVal.textContent = angleDeg + '°';
+
+            // Orbit dot position (ellipse rx=55, cx=60, cy=12)
+            const orbitAngle = (currentFrame / VIEWS[currentView].count) * Math.PI * 2 - Math.PI / 2;
+            const rx = 55, ry = 10, cx = 60, cy = 12;
+            const dotX = cx + rx * Math.cos(orbitAngle);
+            const dotY = cy + ry * Math.sin(orbitAngle);
+            orbitDot.setAttribute('cx', dotX.toFixed(1));
+            orbitDot.setAttribute('cy', dotY.toFixed(1));
+
+            // View badge & labels
+            const label = VIEWS[currentView].label;
+            viewModeLabel.textContent = label + (autoRotate ? ' · Auto rotating' : ' · Drag to rotate');
+            vbTop.textContent = currentView === 'top' ? 'Top View ●' : 'Top';
+            vbBottom.textContent = currentView === 'bottom' ? '● Under Body' : currentView === 'side' ? '● Side View' : 'Side · Bottom';
+
+            // Drop shadow intensity by view
+            if (currentView === 'top') {
+                modelImg.style.filter = 'drop-shadow(0 50px 80px rgba(0,0,0,0.9)) drop-shadow(0 0 60px rgba(212,175,55,0.05))';
+            } else if (currentView === 'bottom') {
+                modelImg.style.filter = 'drop-shadow(0 -30px 60px rgba(0,0,0,0.6)) drop-shadow(0 10px 20px rgba(212,175,55,0.08))';
+            } else {
+                modelImg.style.filter = 'drop-shadow(0 30px 60px rgba(0,0,0,0.8)) drop-shadow(0 5px 15px rgba(212,175,55,0.08))';
+            }
+        }
+
+        // ================================================================
+        //  AUTO ROTATE
+        // ================================================================
+        let autoFrameCountdown = 0;
+
+        function startAutoRotate() {
+            autoRotate = true;
+            document.getElementById('btn-auto').classList.add('auto-on');
+            viewModeLabel.textContent = VIEWS[currentView].label + ' · Auto rotating';
+
+            const SPEED = 40; // ms per frame (lower = faster)
+            let last = 0;
+
+            function tick(ts) {
+                if (!autoRotate) return;
+                if (ts - last >= SPEED) {
+                    last = ts;
+                    currentFrame = (currentFrame + 1) % VIEWS[currentView].count;
+                    renderFrame();
+                }
+                autoRotateRAF = requestAnimationFrame(tick);
+            }
+            autoRotateRAF = requestAnimationFrame(tick);
+        }
+
+        function stopAutoRotate() {
+            autoRotate = false;
+            cancelAnimationFrame(autoRotateRAF);
+            document.getElementById('btn-auto').classList.remove('auto-on');
+            viewModeLabel.textContent = VIEWS[currentView].label + ' · Drag to rotate';
+        }
+
+        function toggleAutoRotate() {
+            if (autoRotate) stopAutoRotate();
+            else startAutoRotate();
+        }
+
+        // ================================================================
+        //  VIEW SWITCHING
+        // ================================================================
+        function setView(view) {
+            currentView = view;
+            currentFrame = 0;
+            renderFrame();
+
+            // Highlight active button
+            ['top', 'side', 'bottom'].forEach(v => {
+                document.getElementById('btn-' + v).classList.toggle('active', v === view);
+            });
+
+            // If not in side view, angle display changes
+            if (view !== 'side') angleVal.textContent = '—';
+        }
+
+        function resetView() {
+            setView('side');
+            currentFrame = 0;
+            renderFrame();
+            if (!autoRotate) startAutoRotate();
+        }
+
+        // ================================================================
+        //  DRAG INTERACTION
+        // ================================================================
+        const stage = document.getElementById('viewer-stage');
+
+        // Sensitivity: how many pixels of drag = 1 frame
+        const DRAG_SENS = 8; // pixels per frame change
+
+        function onDragStart(x, y) {
+            if (!hintShown) {
+                dragHint.classList.add('hidden');
+                hintShown = true;
+            }
+            stopAutoRotate();
+            isDragging = true;
+            dragStartX = x;
+            dragStartY = y;
+            dragStartFrame = currentFrame;
+            stage.classList.add('dragging');
+        }
+
+        function onDragMove(x, y) {
+            if (!isDragging) return;
+
+            const dx = x - dragStartX; // horizontal → rotate current view
+            const dy = y - dragStartY; // vertical   → switch between views
+
+            // Horizontal drag: advance/retreat frames in current view
+            const frameDelta = Math.round(dx / DRAG_SENS);
+            const count = VIEWS[currentView].count;
+            currentFrame = ((dragStartFrame - frameDelta) % count + count) % count;
+            renderFrame();
+
+            // Vertical drag: switch views
+            if (currentView !== 'top' && dy < -70) {
+                setView('top');
+                dragStartX = x; dragStartY = y; dragStartFrame = currentFrame;
+            } else if (currentView !== 'bottom' && dy > 70) {
+                setView('bottom');
+                dragStartX = x; dragStartY = y; dragStartFrame = currentFrame;
+            } else if (currentView !== 'side' && Math.abs(dy) < 30 && VIEWS[currentView] !== 'side') {
+                // Return to side if dragged back
+            }
+        }
+
+        function onDragEnd() {
+            isDragging = false;
+            stage.classList.remove('dragging');
+        }
+
+        // Mouse events
+        stage.addEventListener('mousedown', e => { e.preventDefault(); onDragStart(e.clientX, e.clientY); });
+        window.addEventListener('mousemove', e => { onDragMove(e.clientX, e.clientY); });
+        window.addEventListener('mouseup', onDragEnd);
+
+        // Touch events
+        stage.addEventListener('touchstart', e => {
+            e.preventDefault();
+            const t = e.touches[0];
+            onDragStart(t.clientX, t.clientY);
+        }, { passive: false });
+
+        window.addEventListener('touchmove', e => {
+            e.preventDefault();
+            const t = e.touches[0];
+            onDragMove(t.clientX, t.clientY);
+        }, { passive: false });
+
+        window.addEventListener('touchend', onDragEnd);
+
+        // ================================================================
+        //  SCROLL WHEEL — advance frames or switch views
+        // ================================================================
+        stage.addEventListener('wheel', e => {
+            e.preventDefault();
+            stopAutoRotate();
+
+            const count = VIEWS[currentView].count;
+            const delta = e.deltaY > 0 ? 1 : -1;
+            currentFrame = ((currentFrame + delta) % count + count) % count;
+            renderFrame();
+        }, { passive: false });
+
+        // ================================================================
+        //  KEYBOARD SHORTCUTS
+        // ================================================================
+        window.addEventListener('keydown', e => {
+            switch (e.key) {
+                case 'ArrowLeft': stopAutoRotate(); currentFrame = ((currentFrame - 1) + VIEWS[currentView].count) % VIEWS[currentView].count; renderFrame(); break;
+                case 'ArrowRight': stopAutoRotate(); currentFrame = (currentFrame + 1) % VIEWS[currentView].count; renderFrame(); break;
+                case 'ArrowUp': setView('top'); break;
+                case 'ArrowDown': setView('bottom'); break;
+                case ' ': toggleAutoRotate(); e.preventDefault(); break;
+                case 'r': resetView(); break;
+            }
+        });
+
+        // Show drag hint after 1s on ready — hide on first interaction
+        setTimeout(() => { if (!hintShown) { } }, 1000);
+    </script>
+</body>
+
+</html>

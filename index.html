@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Porsche – Precision & Passion</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;600;700;900&display=swap"
+        rel="stylesheet">
+    <style>
+        /* ============================================================
+           RESET & ROOT
+        ============================================================ */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* ============================================================
+           MODEL FILTER TABS
+        ============================================================ */
+        .family-tabs {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3.5rem;
+        }
+
+        .tab-btn {
+            padding: 0.6rem 1.3rem;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--subtle);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .tab-btn:hover {
+            border-color: rgba(212, 175, 55, 0.4);
+            color: #fff;
+            background: rgba(212, 175, 55, 0.06);
+        }
+
+        .tab-btn.active {
+            background: var(--gold);
+            border-color: var(--gold);
+            color: #000;
+            font-weight: 700;
+        }
+
+        .tab-count {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 50px;
+            padding: 0.1rem 0.45rem;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+
+        .tab-btn.active .tab-count {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Filtered model count line */
+        .model-count-line {
+            text-align: center;
+            color: var(--subtle);
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 2.5rem;
+        }
+
+        .model-count-line span {
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        /* Model cards animate in/out on filter */
+        .model-card {
+            transition: transform 0.4s ease, box-shadow 0.4s ease, border-color 0.4s, opacity 0.3s, scale 0.3s;
+        }
+
+        .model-card.filtered-out {
+            display: none;
+        }
+
+        /* Family heading separator */
+        .family-heading {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0 0.5rem;
+        }
+
+        .family-heading-label {
+            font-size: 0.65rem;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            color: var(--gold);
+            white-space: nowrap;
+        }
+
+        .family-heading-line {
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        :root {
+            --gold: #D4AF37;
+            --gold-light: #f5e27a;
+            --red: #d5001c;
+            --bg: #080808;
+            --bg2: #0f0f0f;
+            --text: #f0f0f0;
+            --subtle: #777;
+            --card-bg: #111111;
+            --border: rgba(255, 255, 255, 0.06);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* ============================================================
+           NAV
+        ============================================================ */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.2rem 5%;
+            transition: background 0.4s, backdrop-filter 0.4s;
+        }
+
+        nav.scrolled {
+            background: rgba(8, 8, 8, 0.92);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            gap: 2.5rem;
+        }
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 400;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #fff;
+        }
+
+        .nav-cta {
+            padding: 0.6rem 1.6rem;
+            background: var(--gold);
+            color: #000 !important;
+            font-weight: 700 !important;
+            border-radius: 4px;
+            letter-spacing: 2px;
+            transition: background 0.3s, transform 0.2s !important;
+        }
+
+        .nav-cta:hover {
+            background: var(--gold-light) !important;
+            transform: translateY(-1px);
+        }
+
+        /* ============================================================
+           BACKGROUND CANVAS — STICKY LAYER
+           This plays the animation in the background while
+           the page content scrolls on top of it.
+        ============================================================ */
+        #bg-scroll-zone {
+            /* Tall enough to scroll through all frames */
+            height: 700vh;
+            position: relative;
+        }
+
+        #bg-canvas-sticky {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* The canvas fills the screen */
+        #bg-canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            min-width: 100%;
+            min-height: 100%;
+            object-fit: cover;
+            opacity: 0.45;
+            /* Subtle — it's the background */
+            filter: brightness(0.7);
+            transition: opacity 0.3s;
+        }
+
+        /* Dark overlays to ensure text legibility */
+        .bg-overlay-top {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40%;
+            background: linear-gradient(to bottom, rgba(8, 8, 8, 0.9), transparent);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .bg-overlay-bottom {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50%;
+            background: linear-gradient(to top, rgba(8, 8, 8, 1), rgba(8, 8, 8, 0.5), transparent);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .bg-overlay-sides {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(8, 8, 8, 0.7) 100%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* ============================================================
+           FOREGROUND CONTENT — floats over the sticky canvas
+           This div covers the same height as the scroll zone,
+           sits absolutely on top, and scrolls normally.
+        ============================================================ */
+        #fg-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            pointer-events: none;
+            /* Let scroll pass through */
+        }
+
+        /* Individual "screens" inside the foreground — each is pinned
+           to appear at a certain scroll progress */
+
+        .fg-screen {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* We stack them by nesting inside position:relative containers
+           of specific heights to control when each appears */
+        .fg-slot {
+            position: relative;
+            pointer-events: none;
+        }
+
+        /* -------- HERO SCREEN -------- */
+        .hero-screen {
+            flex-direction: column;
+            text-align: center;
+            padding: 0 5%;
+        }
+
+        .hero-eyebrow {
+            font-size: 0.7rem;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 1s ease 0.3s forwards;
+        }
+
+        .hero-title {
+            font-size: clamp(3.5rem, 10vw, 9rem);
+            font-weight: 900;
+            line-height: 0.9;
+            letter-spacing: -4px;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeUp 1s ease 0.5s forwards;
+        }
+
+        .hero-title em {
+            font-style: normal;
+            background: linear-gradient(135deg, #fff 30%, var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-sub {
+            margin-top: 2rem;
+            font-size: 1.1rem;
+            color: var(--subtle);
+            max-width: 420px;
+            line-height: 1.7;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 1s ease 0.8s forwards;
+        }
+
+        .hero-scroll-hint {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.65rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--subtle);
+            pointer-events: none;
+            opacity: 0;
+            animation: fadeUp 1s ease 1.2s forwards;
+        }
+
+        .hero-scroll-hint::after {
+            content: '';
+            width: 1px;
+            height: 45px;
+            background: linear-gradient(to bottom, var(--subtle), transparent);
+        }
+
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* -------- PHASE LABELS (appear over canvas mid-scroll) -------- */
+        .phase-overlay {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        .phase-title {
+            font-size: 0.7rem;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            color: var(--gold);
+        }
+
+        .phase-bar-track {
+            width: 140px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 0.7rem auto 0;
+        }
+
+        .phase-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--gold);
+            transition: width 0.1s linear;
+        }
+
+        /* Phase nav dots, fixed right */
+        #phase-nav {
+            position: fixed;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        #phase-nav.visible {
+            opacity: 1;
+        }
+
+        .p-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .p-dot.active {
+            background: var(--gold);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.6);
+            transform: scale(1.5);
+        }
+
+        .p-dot::after {
+            content: attr(data-label);
+            position: absolute;
+            right: 1.4rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.6rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--subtle);
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .p-dot:hover::after,
+        .p-dot.active::after {
+            opacity: 1;
+        }
+
+        .p-dot.active::after {
+            color: var(--gold);
+        }
+
+        /* ============================================================
+           MODELS SECTION — below the scroll zone
+        ============================================================ */
+        #models {
+            background: var(--bg);
+            padding: 8rem 5% 6rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        #models::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            background: linear-gradient(to bottom, #080808, transparent);
+            pointer-events: none;
+        }
+
+        .section-eyebrow {
+            font-size: 0.7rem;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: var(--gold);
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: clamp(2.5rem, 5vw, 4.5rem);
+            font-weight: 900;
+            text-align: center;
+            letter-spacing: -2px;
+            margin-bottom: 1rem;
+        }
+
+        .section-sub {
+            text-align: center;
+            color: var(--subtle);
+            font-size: 1rem;
+            max-width: 500px;
+            margin: 0 auto 5rem;
+            line-height: 1.7;
+        }
+
+        /* Model Grid */
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        /* Large featured card (first) */
+        .model-grid .model-card:first-child {
+            grid-column: 1 / -1;
+            /* Full width */
+        }
+
+        .model-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            transition: transform 0.4s ease, box-shadow 0.4s ease, border-color 0.4s;
+            cursor: pointer;
+            position: relative;
+            text-decoration: none;
+            display: block;
+        }
+
+        .model-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+            border-color: rgba(212, 175, 55, 0.25);
+        }
+
+        /* Featured (first) card image is taller */
+        .model-card:first-child .model-img-wrap {
+            height: 480px;
+        }
+
+        .model-img-wrap {
+            position: relative;
+            height: 260px;
+            overflow: hidden;
+        }
+
+        .model-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s ease;
+            filter: brightness(0.85);
+        }
+
+        .model-card:hover .model-img-wrap img {
+            transform: scale(1.05);
+            filter: brightness(1);
+        }
+
+        /* Gold accent line at top of card on hover */
+        .model-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--gold), var(--gold-light));
+            transform: scaleX(0);
+            transition: transform 0.4s ease;
+            z-index: 5;
+        }
+
+        .model-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        /* Badge on image */
+        .model-badge {
+            position: absolute;
+            top: 1.2rem;
+            left: 1.2rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-weight: 700;
+            z-index: 3;
+        }
+
+        .badge-new {
+            background: var(--gold);
+            color: #000;
+        }
+
+        .badge-electric {
+            background: #1a9fff;
+            color: #fff;
+        }
+
+        .badge-suv {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .badge-sport {
+            background: var(--red);
+            color: #fff;
+        }
+
+        .badge-icon {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        /* Image overlay gradient */
+        .model-img-wrap::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(10, 10, 10, 0.95) 0%, rgba(10, 10, 10, 0.1) 60%, transparent);
+        }
+
+        /* Price overlaid on image */
+        .model-price-overlay {
+            position: absolute;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            z-index: 3;
+        }
+
+        /* Card body */
+        .model-body {
+            padding: 1.8rem 2rem 2rem;
+        }
+
+        .model-name {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.4rem;
+            letter-spacing: -0.5px;
+        }
+
+        /* Featured card name bigger */
+        .model-card:first-child .model-name {
+            font-size: 2.3rem;
+        }
+
+        .model-desc {
+            color: var(--subtle);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Specs row */
+        .model-specs {
+            display: flex;
+            gap: 1.5rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1.2rem;
+            flex-wrap: wrap;
+        }
+
+        .spec {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .spec-val {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .spec-lbl {
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--subtle);
+        }
+
+        /* Arrow icon in bottom-right */
+        .model-arrow {
+            position: absolute;
+            bottom: 1.8rem;
+            right: 1.8rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .model-card:hover .model-arrow {
+            background: var(--gold);
+            border-color: var(--gold);
+        }
+
+        .model-card:hover .model-arrow svg {
+            stroke: #000;
+        }
+
+        /* 360 view teaser */
+        .view360-banner {
+            margin: 4rem 0 0;
+            padding: 2.5rem;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.06), rgba(212, 175, 55, 0.02));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s;
+            flex-wrap: wrap;
+        }
+
+        .view360-banner:hover {
+            border-color: rgba(212, 175, 55, 0.45);
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.04));
+            transform: translateY(-2px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+        }
+
+        .v360-left {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .v360-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(212, 175, 55, 0.12);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .v360-text-label {
+            font-size: 0.65rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 0.3rem;
+        }
+
+        .v360-text-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .v360-cta {
+            padding: 0.9rem 2rem;
+            background: var(--gold);
+            color: #000;
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        /* ============================================================
+           FEATURES / STATS STRIP
+        ============================================================ */
+        .stats-strip {
+            background: var(--bg2);
+            padding: 5rem 5%;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+            text-align: center;
+        }
+
+        .stat-item {}
+
+        .stat-number {
+            font-size: 3.5rem;
+            font-weight: 900;
+            letter-spacing: -2px;
+            background: linear-gradient(135deg, #fff, var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--subtle);
+            margin-top: 0.4rem;
+        }
+
+        /* ============================================================
+           FOOTER
+        ============================================================ */
+        footer {
+            background: #050505;
+            padding: 5rem 5% 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-top {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            gap: 4rem;
+            margin-bottom: 4rem;
+        }
+
+        .footer-brand .logo-f {
+            font-size: 1.4rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            margin-bottom: 1.2rem;
+            display: block;
+        }
+
+        .footer-brand p {
+            color: var(--subtle);
+            font-size: 0.9rem;
+            line-height: 1.7;
+            max-width: 280px;
+        }
+
+        .footer-col h5 {
+            font-size: 0.7rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.4);
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-col ul {
+            list-style: none;
+        }
+
+        .footer-col ul li {
+            margin-bottom: 0.8rem;
+        }
+
+        .footer-col ul li a {
+            color: var(--subtle);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .footer-col ul li a:hover {
+            color: #fff;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid var(--border);
+            padding-top: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.25);
+            font-size: 0.8rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        /* ============================================================
+           RESPONSIVE
+        ============================================================ */
+        @media (max-width: 1024px) {
+            .model-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .model-grid .model-card:first-child {
+                grid-column: 1 / -1;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .footer-top {
+                grid-template-columns: 1fr 1fr;
+                gap: 2.5rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .model-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .footer-top {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .hero-title {
+                letter-spacing: -2px;
+            }
+        }
+
+        /* Reveal on scroll */
+        .reveal {
+            opacity: 0;
+            transform: translateY(35px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+
+        .reveal.in-view {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ============================================================
+         NAVIGATION
+    ============================================================ -->
+    <nav id="main-nav">
+        <div class="logo">PORSCHE</div>
+        <ul class="nav-links">
+            <li><a href="#models">Models</a></li>
+            <li><a href="3d-scroll.html">360° View</a></li>
+            <li><a href="#experience">Experience</a></li>
+            <li><a href="#" class="nav-cta">Build Yours</a></li>
+        </ul>
+    </nav>
+
+    <!-- Phase nav dots (appear during scroll animation) -->
+    <div id="phase-nav">
+        <div class="p-dot active" data-phase="0" data-label="Top View"></div>
+        <div class="p-dot" data-phase="1" data-label="Side View"></div>
+        <div class="p-dot" data-phase="2" data-label="Bottom View"></div>
+    </div>
+
+    <!-- ============================================================
+         BACKGROUND SCROLL ANIMATION ZONE
+         This is the whole top area where the canvas animates
+         as a background while text overlays float on top.
+    ============================================================ -->
+    <div id="bg-scroll-zone">
+
+        <!-- STICKY CANVAS LAYER (background) -->
+        <div id="bg-canvas-sticky">
+            <canvas id="bg-canvas"></canvas>
+            <div class="bg-overlay-top"></div>
+            <div class="bg-overlay-sides"></div>
+            <div class="bg-overlay-bottom"></div>
+
+            <!-- Phase indicator -->
+            <div class="phase-overlay" id="phase-overlay" style="display:none;">
+                <div class="phase-title" id="phase-title-text">Top View</div>
+                <div class="phase-bar-track">
+                    <div class="phase-bar-fill" id="phase-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOREGROUND CONTENT (scrolls on top of canvas) -->
+        <div id="fg-content">
+
+            <!-- SLOT 1: Hero — occupies first ~100vh of scroll -->
+            <div class="fg-slot" style="height: 150vh;">
+                <div class="fg-screen hero-screen" style="pointer-events:auto;">
+                    <div class="hero-eyebrow">The Icon. Reimagined.</div>
+                    <h1 class="hero-title"><em>Driven<br>by Dreams.</em></h1>
+                    <p class="hero-sub">Scroll to experience Porsche engineering from every angle — top, side and
+                        underneath.</p>
+                    <div class="hero-scroll-hint">Scroll</div>
+                </div>
+            </div>
+
+            <!-- SLOT 2: Empty — canvas plays in background -->
+            <div class="fg-slot" style="height: 200vh;"></div>
+
+            <!-- SLOT 3: Mid-scroll text — appears as side view plays -->
+            <div class="fg-slot" style="height: 150vh;">
+                <div class="fg-screen" style="justify-content: flex-start; padding-left: 8%; pointer-events:none;">
+                    <div style="max-width: 380px; padding-top: calc(50vh - 120px);">
+                        <div
+                            style="font-size:0.65rem; letter-spacing:5px; text-transform:uppercase; color:var(--gold); margin-bottom:1rem;">
+                            Pure Silhouette</div>
+                        <h2
+                            style="font-size:3rem; font-weight:900; line-height:1; margin-bottom:1rem; letter-spacing:-2px;">
+                            Unmistakable.<br>Timeless.</h2>
+                        <p style="color:var(--subtle); line-height:1.7;">A profile that hasn't changed in 60 years
+                            because it was perfect from day one. Every curve tells a story of performance.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLOT 4: Bottom view text -->
+            <div class="fg-slot" style="height: 150vh;">
+                <div class="fg-screen" style="justify-content: flex-end; padding-right: 8%; pointer-events:none;">
+                    <div style="max-width: 360px; padding-top: calc(50vh - 100px); text-align:right;">
+                        <div
+                            style="font-size:0.65rem; letter-spacing:5px; text-transform:uppercase; color:var(--gold); margin-bottom:1rem;">
+                            Engineering</div>
+                        <h2
+                            style="font-size:2.8rem; font-weight:900; line-height:1; margin-bottom:1rem; letter-spacing:-2px;">
+                            Invisible mastery<br>beneath.</h2>
+                        <p style="color:var(--subtle); line-height:1.7;">Precision diffusers, flat underbody panels and
+                            active suspension geometry — the unseen forces that define Porsche performance.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLOT 5: Transition gap -->
+            <div class="fg-slot" style="height: 150vh;"></div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         STATS STRIP
+    ============================================================ -->
+    <div class="stats-strip">
+        <div class="stats-grid">
+            <div class="stat-item reveal">
+                <div class="stat-number">379<span style="font-size:1.8rem">hp</span></div>
+                <div class="stat-label">Peak Power</div>
+            </div>
+            <div class="stat-item reveal">
+                <div class="stat-number">3.4<span style="font-size:1.8rem">s</span></div>
+                <div class="stat-label">0–60 mph</div>
+            </div>
+            <div class="stat-item reveal">
+                <div class="stat-number">182<span style="font-size:1.8rem">mph</span></div>
+                <div class="stat-label">Top Speed</div>
+            </div>
+            <div class="stat-item reveal">
+                <div class="stat-number">75<span style="font-size:1.8rem">yr</span></div>
+                <div class="stat-label">Of Racing Legacy</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         ALL MODELS SECTION
+    ============================================================ -->
+    <main id="models">
+        <div class="section-eyebrow reveal">Complete Lineup</div>
+        <h2 class="section-title reveal">Every Porsche.<br>Every Variant.</h2>
+        <p class="section-sub reveal">37 models across 6 iconic families. Find the one built for you.</p>
+
+        <!-- Family Filter Tabs -->
+        <div class="family-tabs" id="family-tabs">
+            <!-- Injected by JS -->
+        </div>
+
+        <!-- Count line -->
+        <div class="model-count-line" id="model-count-line">Showing <span id="count-num">37</span> models</div>
+
+        <div class="model-grid" id="model-grid">
+            <!-- Injected by JS -->
+        </div>
+
+        <!-- 360 Banner -->
+        <a href="3d-scroll.html" class="view360-banner reveal">
+            <div class="v360-left">
+                <div class="v360-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D4AF37" stroke-width="1.5">
+                        <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" />
+                        <path d="M12 6v6l4 2" />
+                        <path d="M18 2l3 3-3 3" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="v360-text-label">Interactive Experience</div>
+                    <div class="v360-text-title">360° Scroll Animation — Top · Side · Underbody</div>
+                </div>
+            </div>
+            <div class="v360-cta">Explore Now →</div>
+        </a>
+    </main>
+
+    <!-- ============================================================
+         FOOTER
+    ============================================================ -->
+    <footer id="experience">
+        <div class="footer-top">
+            <div class="footer-brand">
+                <span class="logo-f">PORSCHE</span>
+                <p>Sports cars, SUVs, sedans and electric vehicles. Since 1948, building extraordinary cars for
+                    extraordinary people.</p>
+            </div>
+            <div class="footer-col">
+                <h5>Models</h5>
+                <ul>
+                    <li><a href="model-details.html?model=911">911</a></li>
+                    <li><a href="model-details.html?model=taycan">Taycan</a></li>
+                    <li><a href="model-details.html?model=panamera">Panamera</a></li>
+                    <li><a href="model-details.html?model=macan">Macan</a></li>
+                    <li><a href="model-details.html?model=cayenne">Cayenne</a></li>
+                    <li><a href="model-details.html?model=718">718</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h5>Services</h5>
+                <ul>
+                    <li><a href="#">Find a Dealer</a></li>
+                    <li><a href="#">Financial Services</a></li>
+                    <li><a href="#">Porsche Experience</a></li>
+                    <li><a href="#">Service & Accessories</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h5>Company</h5>
+                <ul>
+                    <li><a href="#">About Porsche</a></li>
+                    <li><a href="#">Sustainability</a></li>
+                    <li><a href="#">Careers</a></li>
+                    <li><a href="#">Press</a></li>
+                    <li><a href="#">Instagram</a></li>
+                    <li><a href="#">YouTube</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span>© 2024 Porsche AG. All rights reserved.</span>
+            <span>Legal Notice · Privacy Policy · Cookies</span>
+        </div>
+    </footer>
+
+    <!-- ============================================================
+         SCRIPTS
+    ============================================================ -->
+    <script src="models.js"></script>
+    <script>
+        // ================================================================
+        //  NAV scroll effect
+        // ================================================================
+        const nav = document.getElementById('main-nav');
+        window.addEventListener('scroll', () => {
+            nav.classList.toggle('scrolled', window.scrollY > 60);
+        }, { passive: true });
+
+        // ================================================================
+        //  BACKGROUND CANVAS ANIMATION
+        // ================================================================
+        const FRAME_SETS = [
+            { dir: 'assets/images/top_view/', prefix: 'ezgif-frame-', count: 40, ext: '.jpg', label: 'Top View' },
+            { dir: 'assets/images/side_view/', prefix: 'ezgif-frame-', count: 40, ext: '.jpg', label: 'Side View' },
+            { dir: 'assets/images/bottom_view/', prefix: 'ezgif-frame-', count: 64, ext: '.jpg', label: 'Under Body' },
+        ];
+        const TOTAL_FRAMES = FRAME_SETS.reduce((s, f) => s + f.count, 0);
+        const allFrames = [[], [], []];
+        let loadedCount = 0;
+
+        FRAME_SETS.forEach((set, si) => {
+            for (let i = 1; i <= set.count; i++) {
+                const img = new Image();
+                img.src = `${set.dir}${set.prefix}${String(i).padStart(3, '0')}${set.ext}`;
+                img.onload = img.onerror = () => { loadedCount++; if (loadedCount >= TOTAL_FRAMES) onAllLoaded(); };
+                allFrames[si].push(img);
+            }
+        });
+
+        const bgCanvas = document.getElementById('bg-canvas');
+        const ctx = bgCanvas.getContext('2d');
+        const phaseNav = document.getElementById('phase-nav');
+        const phaseOverlay = document.getElementById('phase-overlay');
+        const phaseTitleText = document.getElementById('phase-title-text');
+        const phaseFill = document.getElementById('phase-fill');
+        const pDots = document.querySelectorAll('.p-dot');
+
+        function resizeCanvas() { bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight; }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawBgFrame(phaseIdx, frameIdx) {
+            const img = allFrames[phaseIdx]?.[frameIdx];
+            if (!img || !img.complete || img.naturalWidth === 0) return;
+            ctx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+            const sw = bgCanvas.width, sh = bgCanvas.height;
+            const scale = Math.max(sw / img.naturalWidth, sh / img.naturalHeight);
+            const dw = img.naturalWidth * scale, dh = img.naturalHeight * scale;
+            ctx.drawImage(img, (sw - dw) / 2, (sh - dh) / 2, dw, dh);
+        }
+
+        let lastPhaseIdx = -1;
+        function onScroll() {
+            const zone = document.getElementById('bg-scroll-zone');
+            const zoneTop = zone.getBoundingClientRect().top + window.scrollY;
+            const scrolled = window.scrollY - zoneTop;
+            const zoneHeight = zone.offsetHeight - window.innerHeight;
+            if (scrolled < 0 || zoneHeight <= 0) {
+                phaseNav.classList.remove('visible');
+                phaseOverlay.style.display = 'none';
+                drawBgFrame(0, 0); return;
+            }
+            const progress = Math.min(Math.max(scrolled / zoneHeight, 0), 1);
+            if (progress > 0.02) { phaseNav.classList.add('visible'); phaseOverlay.style.display = 'block'; }
+            else { phaseNav.classList.remove('visible'); phaseOverlay.style.display = 'none'; }
+            const globalFrame = Math.floor(progress * (TOTAL_FRAMES - 1));
+            let rem = globalFrame, phaseIdx = 0;
+            for (let i = 0; i < FRAME_SETS.length; i++) { if (rem < FRAME_SETS[i].count) { phaseIdx = i; break; } rem -= FRAME_SETS[i].count; }
+            const localFrame = Math.min(rem, FRAME_SETS[phaseIdx].count - 1);
+            phaseFill.style.width = ((localFrame + 1) / FRAME_SETS[phaseIdx].count * 100) + '%';
+            phaseTitleText.textContent = FRAME_SETS[phaseIdx].label;
+            if (phaseIdx !== lastPhaseIdx) { lastPhaseIdx = phaseIdx; pDots.forEach(d => d.classList.toggle('active', parseInt(d.dataset.phase) === phaseIdx)); }
+            drawBgFrame(phaseIdx, localFrame);
+        }
+
+        function onAllLoaded() { drawBgFrame(0, 0); window.addEventListener('scroll', onScroll, { passive: true }); onScroll(); }
+
+        pDots.forEach(dot => {
+            dot.addEventListener('click', () => {
+                const pi = parseInt(dot.dataset.phase);
+                const zone = document.getElementById('bg-scroll-zone');
+                const zoneTop = zone.getBoundingClientRect().top + window.scrollY;
+                const zoneHeight = zone.offsetHeight - window.innerHeight;
+                let sf = 0; for (let i = 0; i < pi; i++) sf += FRAME_SETS[i].count;
+                window.scrollTo({ top: zoneTop + (sf / (TOTAL_FRAMES - 1)) * zoneHeight, behavior: 'smooth' });
+            });
+        });
+
+        // ================================================================
+        //  MODEL CARDS + FAMILY FILTER
+        // ================================================================
+        const grid = document.getElementById('model-grid');
+        const tabsContainer = document.getElementById('family-tabs');
+        const countNum = document.getElementById('count-num');
+        let activeFamily = 'all';
+
+        // Build family counts
+        const familyCounts = { all: models.length };
+        models.forEach(m => { familyCounts[m.family] = (familyCounts[m.family] || 0) + 1; });
+
+        // Render tabs
+        modelFamilies.forEach(fam => {
+            const btn = document.createElement('button');
+            btn.className = 'tab-btn' + (fam.id === 'all' ? ' active' : '');
+            btn.dataset.family = fam.id;
+            btn.innerHTML = `${fam.icon} ${fam.label} <span class="tab-count">${familyCounts[fam.id] || 0}</span>`;
+            btn.addEventListener('click', () => filterModels(fam.id));
+            tabsContainer.appendChild(btn);
+        });
+
+        // Render all model cards
+        let currentFamily = null;
+        models.forEach(m => {
+            // Family separator heading
+            if (m.family !== currentFamily) {
+                currentFamily = m.family;
+                const sep = document.createElement('div');
+                sep.className = 'family-heading';
+                sep.dataset.family = m.family;
+                sep.innerHTML = `<span class="family-heading-label">${m.family} Series</span><div class="family-heading-line"></div>`;
+                grid.appendChild(sep);
+            }
+
+            const card = document.createElement('a');
+            card.href = m.link;
+            card.className = 'model-card';
+            card.dataset.family = m.family;
+            card.innerHTML = `
+            <div class="model-img-wrap">
+                <img src="${m.image}" alt="Porsche ${m.name}"
+                     onerror="this.src='assets/images/porsche_911.jpeg'" loading="lazy">
+                <span class="model-badge ${m.badgeClass}">${m.badge}</span>
+                <span class="model-price-overlay">From ${m.price}</span>
+            </div>
+            <div class="model-body">
+                <div class="model-name">${m.name}</div>
+                <div class="model-desc" style="font-size:0.82rem;">${m.tagline}</div>
+                <div class="model-specs">
+                    <div class="spec"><span class="spec-val">${m.specs.power}</span><span class="spec-lbl">Power</span></div>
+                    <div class="spec"><span class="spec-val">${m.specs.acceleration}</span><span class="spec-lbl">0-60</span></div>
+                    <div class="spec"><span class="spec-val">${m.specs.topSpeed}</span><span class="spec-lbl">Top Speed</span></div>
+                </div>
+            </div>
+            <div class="model-arrow">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+        `;
+            grid.appendChild(card);
+        });
+
+        function filterModels(family) {
+            activeFamily = family;
+
+            // Update tabs
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.family === family));
+
+            // Show/hide cards and separators
+            let visibleCount = 0;
+            document.querySelectorAll('.model-card').forEach(card => {
+                const show = family === 'all' || card.dataset.family === family;
+                card.classList.toggle('filtered-out', !show);
+                if (show) visibleCount++;
+            });
+
+            document.querySelectorAll('.family-heading').forEach(sep => {
+                const show = family === 'all' || sep.dataset.family === family;
+                sep.style.display = show ? 'flex' : 'none';
+            });
+
+            countNum.textContent = visibleCount;
+
+            // Scroll to models section
+            document.getElementById('models').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // ================================================================
+        //  SCROLL REVEAL
+        // ================================================================
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry, i) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => entry.target.classList.add('in-view'), i * 60);
+                    revealObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.08 });
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+    </script>
+</body>
+
+</html>
